@@ -250,7 +250,7 @@ export const useArticles = (category?: Category) => {
         await new Promise(resolve => setTimeout(resolve, 100));
         setArticles(sampleArticles);
         setError(null);
-      } catch (err) {
+      } catch (_err) {
         setError('Failed to load articles');
       } finally {
         setLoading(false);
