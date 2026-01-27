@@ -5,26 +5,24 @@ export const Footer = () => {
 
   return (
     <footer className="bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div className="max-w-7xl mx-auto px-4 py-8 sm:py-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand */}
-          <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-accent to-primary rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">D</span>
-              </div>
-              <span className="text-xl font-bold text-primary dark:text-white">
-                Dev Stories
+          <div className="sm:col-span-2 text-center sm:text-left">
+            <div className="flex items-center justify-center sm:justify-start gap-2 mb-4">
+              <img src="/logo.svg" alt="Dev Stories" className="h-10 w-auto" />
+              <span className="text-xl font-bold bg-gradient-to-r from-emerald-500 to-teal-400 bg-clip-text text-transparent">
+                DEV STORIES
               </span>
             </div>
-            <p className="text-gray-600 dark:text-gray-400 max-w-md">
+            <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto sm:mx-0">
               Un blog technique pour les développeurs passionnés. Découvrez les dernières
               tendances, tutoriels et bonnes pratiques du développement logiciel.
             </p>
           </div>
 
           {/* Links */}
-          <div>
+          <div className="text-center sm:text-left">
             <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
               Catégories
             </h3>
@@ -65,11 +63,11 @@ export const Footer = () => {
           </div>
 
           {/* Social */}
-          <div>
+          <div className="text-center sm:text-left">
             <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
               Suivez-nous
             </h3>
-            <div className="flex gap-4">
+            <div className="flex justify-center sm:justify-start gap-4">
               <a
                 href="https://twitter.com"
                 target="_blank"
