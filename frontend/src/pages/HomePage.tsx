@@ -11,10 +11,43 @@ export const HomePage = () => {
   const latestArticles = articles.slice(2, 6);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column - Small Article */}
-        <div className="lg:col-span-3">
+        {/* Mobile: Featured first, then side, then latest */}
+        {/* Desktop: side | featured | latest */}
+
+        {/* Center Column - Featured Article (order-1 on mobile, order-2 on desktop) */}
+        <div className="lg:col-span-6 order-1 lg:order-2">
+          {featuredArticle && (
+            <Link to={`/article/${featuredArticle.slug}`} className="block group">
+              <article>
+                <div className="relative aspect-[16/10] rounded-lg overflow-hidden mb-4">
+                  <img
+                    src={featuredArticle.image}
+                    alt={featuredArticle.title}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                </div>
+                <div className="text-center">
+                  {(() => {
+                    const catInfo = getCategoryInfo(featuredArticle.category);
+                    return catInfo ? (
+                      <span className={`text-xs font-semibold uppercase tracking-wider ${catInfo.color}`}>
+                        {catInfo.label}
+                      </span>
+                    ) : null;
+                  })()}
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mt-3 group-hover:text-accent transition-colors leading-tight">
+                    {featuredArticle.title}
+                  </h1>
+                </div>
+              </article>
+            </Link>
+          )}
+        </div>
+
+        {/* Left Column - Small Article (order-2 on mobile, order-1 on desktop) */}
+        <div className="lg:col-span-3 order-2 lg:order-1">
           {sideArticle && (
             <Link to={`/article/${sideArticle.slug}`} className="block group">
               <article>
@@ -47,38 +80,8 @@ export const HomePage = () => {
           )}
         </div>
 
-        {/* Center Column - Featured Article */}
-        <div className="lg:col-span-6">
-          {featuredArticle && (
-            <Link to={`/article/${featuredArticle.slug}`} className="block group">
-              <article>
-                <div className="relative aspect-[16/10] rounded-lg overflow-hidden mb-4">
-                  <img
-                    src={featuredArticle.image}
-                    alt={featuredArticle.title}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                </div>
-                <div className="text-center">
-                  {(() => {
-                    const catInfo = getCategoryInfo(featuredArticle.category);
-                    return catInfo ? (
-                      <span className={`text-xs font-semibold uppercase tracking-wider ${catInfo.color}`}>
-                        {catInfo.label}
-                      </span>
-                    ) : null;
-                  })()}
-                  <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mt-3 group-hover:text-accent transition-colors leading-tight">
-                    {featuredArticle.title}
-                  </h1>
-                </div>
-              </article>
-            </Link>
-          )}
-        </div>
-
-        {/* Right Column - Latest Articles */}
-        <div className="lg:col-span-3">
+        {/* Right Column - Latest Articles (order-3 on all screens) */}
+        <div className="lg:col-span-3 order-3">
           <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
             Dernier
           </h3>
