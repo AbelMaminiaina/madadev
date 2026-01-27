@@ -8,7 +8,7 @@ load_dotenv()
 # PostgreSQL only
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://postgres:postgres@localhost:5432/devstories"
+    "postgresql://postgres:postgres@localhost:5433/devstories"
 )
 
 engine = create_engine(DATABASE_URL)
