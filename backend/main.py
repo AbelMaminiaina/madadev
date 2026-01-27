@@ -25,6 +25,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://localhost:3000",
+        "https://madadev.vercel.app",
         FRONTEND_URL,
     ],
     allow_credentials=True,
