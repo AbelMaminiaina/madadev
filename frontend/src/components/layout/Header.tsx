@@ -3,9 +3,11 @@ import { Logo } from '../common/Logo';
 import { SearchBar } from '../ui/SearchBar';
 import { CategoryNav } from '../ui/CategoryNav';
 import { useTheme } from '../../hooks/useTheme';
+import { useAuth } from '../../context/AuthContext';
 
 export const Header = () => {
   const { isDark, toggleTheme } = useTheme();
+  const { user, isAuthenticated, logout } = useAuth();
 
   return (
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
@@ -35,12 +37,26 @@ export const Header = () => {
               </button>
               <SearchBar />
             </div>
-            <Link
-              to="#"
-              className="px-3 py-1.5 bg-accent text-white text-sm font-medium rounded hover:bg-accent-dark transition-colors"
-            >
-              S'abonner
-            </Link>
+            {isAuthenticated ? (
+              <div className="flex items-center gap-2">
+                <Link to="/admin" className="text-sm text-gray-600 dark:text-gray-400">
+                  {user?.name}
+                </Link>
+                <button
+                  onClick={logout}
+                  className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Déconnexion
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="px-3 py-1.5 bg-accent text-white text-sm font-medium rounded hover:bg-accent-dark transition-colors"
+              >
+                Connexion
+              </Link>
+            )}
           </div>
         </div>
 
@@ -73,18 +89,37 @@ export const Header = () => {
 
           {/* Right - Auth Buttons */}
           <div className="flex items-center gap-3">
-            <Link
-              to="#"
-              className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-            >
-              S'identifier
-            </Link>
-            <Link
-              to="#"
-              className="px-4 py-2 bg-accent text-white text-sm font-medium rounded hover:bg-accent-dark transition-colors"
-            >
-              S'abonner
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  to="/admin"
+                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
+                  {user?.name}
+                </Link>
+                <button
+                  onClick={logout}
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Déconnexion
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
+                  S'identifier
+                </Link>
+                <Link
+                  to="/register"
+                  className="px-4 py-2 bg-accent text-white text-sm font-medium rounded hover:bg-accent-dark transition-colors"
+                >
+                  S'inscrire
+                </Link>
+              </>
+            )}
           </div>
         </div>
 

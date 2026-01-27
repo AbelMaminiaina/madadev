@@ -2,11 +2,19 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import date
+from datetime import date, timedelta
 
 from database import get_db, engine
-from models import Base, Article as ArticleModel
-from schemas import Article, ArticleCreate, ArticleUpdate
+from models import Base, Article as ArticleModel, User as UserModel
+from schemas import (
+    Article, ArticleCreate, ArticleUpdate,
+    UserCreate, UserLogin, User, Token
+)
+from auth import (
+    get_password_hash, authenticate_user, create_access_token,
+    get_current_active_user, get_current_user, get_user_by_email,
+    ACCESS_TOKEN_EXPIRE_MINUTES
+)
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -37,6 +45,48 @@ app.add_middleware(
 @app.get("/")
 def root():
     return {"message": "Dev Stories API", "version": "1.0.0"}
+
+
+# Auth endpoints
+@app.post("/api/auth/register", response_model=User)
+def register(user: UserCreate, db: Session = Depends(get_db)):
+    # Check if user exists
+    existing = get_user_by_email(db, user.email)
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    # Create user
+    db_user = UserModel(
+        email=user.email,
+        hashed_password=get_password_hash(user.password),
+        name=user.name,
+        is_admin=False
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
+@app.post("/api/auth/login", response_model=Token)
+def login(user: UserLogin, db: Session = Depends(get_db)):
+    db_user = authenticate_user(db, user.email, user.password)
+    if not db_user:
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect email or password"
+        )
+
+    access_token = create_access_token(
+        data={"sub": db_user.email},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/api/auth/me", response_model=User)
+def get_me(current_user: UserModel = Depends(get_current_active_user)):
+    return current_user
 
 
 # Articles endpoints
@@ -73,7 +123,11 @@ def get_article(slug: str, db: Session = Depends(get_db)):
 
 
 @app.post("/api/articles", response_model=Article)
-def create_article(article: ArticleCreate, db: Session = Depends(get_db)):
+def create_article(
+    article: ArticleCreate,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_active_user)
+):
     # Check if slug exists
     existing = db.query(ArticleModel).filter(ArticleModel.slug == article.slug).first()
     if existing:
@@ -96,7 +150,12 @@ def create_article(article: ArticleCreate, db: Session = Depends(get_db)):
 
 
 @app.put("/api/articles/{slug}", response_model=Article)
-def update_article(slug: str, article: ArticleUpdate, db: Session = Depends(get_db)):
+def update_article(
+    slug: str,
+    article: ArticleUpdate,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_active_user)
+):
     db_article = db.query(ArticleModel).filter(ArticleModel.slug == slug).first()
     if not db_article:
         raise HTTPException(status_code=404, detail="Article not found")
@@ -111,7 +170,11 @@ def update_article(slug: str, article: ArticleUpdate, db: Session = Depends(get_
 
 
 @app.delete("/api/articles/{slug}")
-def delete_article(slug: str, db: Session = Depends(get_db)):
+def delete_article(
+    slug: str,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_active_user)
+):
     db_article = db.query(ArticleModel).filter(ArticleModel.slug == slug).first()
     if not db_article:
         raise HTTPException(status_code=404, detail="Article not found")
