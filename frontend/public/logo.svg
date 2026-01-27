@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" fill="none">
+  <!-- Book outline - navy blue -->
+  <g stroke="#1e2a5e" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- Left page -->
+    <path d="M120 145 L120 25 L35 40 L35 130 Q77 118 120 145"/>
+    <!-- Right page -->
+    <path d="M120 145 L120 25 L205 40 L205 130 Q163 118 120 145"/>
+  </g>
+
+  <!-- Left curly brace { - cyan -->
+  <path d="M55 45 Q50 45 50 50 L50 70 Q50 80 45 80 Q50 80 50 90 L50 110 Q50 115 55 115"
+        stroke="#40e0d0" stroke-width="5" stroke-linecap="round" fill="none"/>
+
+  <!-- Right curly brace } - cyan -->
+  <path d="M185 45 Q190 45 190 50 L190 70 Q190 80 195 80 Q190 80 190 90 L190 110 Q190 115 185 115"
+        stroke="#40e0d0" stroke-width="5" stroke-linecap="round" fill="none"/>
+
+  <!-- Left chevron < - cyan -->
+  <path d="M95 55 L75 80 L95 105" stroke="#40e0d0" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Right chevron > - cyan -->
+  <path d="M145 55 L165 80 L145 105" stroke="#40e0d0" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
