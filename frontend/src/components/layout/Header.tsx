@@ -1,19 +1,35 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Logo } from '../common/Logo';
 import { SearchBar } from '../ui/SearchBar';
 import { CategoryNav } from '../ui/CategoryNav';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../context/AuthContext';
+import { useSearch } from '../../hooks/useSearch';
+import { useArticlesStore } from '../../hooks/useArticlesStore';
 import { categories } from '../../data/categories';
+import type { Article } from '../../types';
 
 export const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { isDark, toggleTheme } = useTheme();
   const { user, isAuthenticated, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
-  const closeMenu = () => setIsMenuOpen(false);
+  // Mobile search
+  const { allArticles } = useArticlesStore();
+  const { query, setQuery, results, clearSearch, isSearching } = useSearch(allArticles);
+
+  const closeMenu = () => {
+    setIsMenuOpen(false);
+    clearSearch();
+  };
+
+  const handleMobileArticleClick = (article: Article) => {
+    navigate(`/article/${article.slug}`);
+    closeMenu();
+  };
 
   const isActive = (categoryName: string) => {
     if (categoryName === 'HOME') {
@@ -47,39 +63,96 @@ export const Header = () => {
           {/* Logo centered */}
           <Logo />
 
-          {/* Search & Theme on right */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={toggleTheme}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-            >
-              {isDark ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-              )}
-            </button>
-            <SearchBar />
-          </div>
+          {/* Theme toggle on right */}
+          <button
+            onClick={toggleTheme}
+            className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            {isDark ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            )}
+          </button>
         </div>
 
         {/* Mobile Menu Drawer */}
         {isMenuOpen && (
           <div className="md:hidden border-t border-gray-200 dark:border-gray-800">
+            {/* Mobile Search */}
+            <div className="px-4 py-4 border-b border-gray-200 dark:border-gray-800">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Rechercher un article..."
+                  className="w-full px-4 py-3 pl-10 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent text-base"
+                />
+                <svg
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+
+              {/* Mobile Search Results */}
+              {isSearching && (
+                <div className="mt-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 max-h-64 overflow-y-auto">
+                  {results.length > 0 ? (
+                    <ul>
+                      {results.slice(0, 5).map((article) => (
+                        <li key={article.slug}>
+                          <button
+                            onClick={() => handleMobileArticleClick(article)}
+                            className="w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                          >
+                            <p className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2">
+                              {article.title}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded">
+                                {article.category}
+                              </span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {article.author}
+                              </span>
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="px-4 py-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+                      Aucun résultat trouvé
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Auth Section */}
             <div className="px-4 py-4 border-b border-gray-200 dark:border-gray-800">
               {isAuthenticated ? (
                 <div className="flex items-center justify-between">
                   <Link
-                    to="/admin"
+                    to={user?.is_admin ? '/admin' : '/user'}
                     onClick={closeMenu}
                     className="text-sm font-medium text-gray-900 dark:text-white"
                   >
-                    {user?.name}
+                    {user?.is_admin ? 'Administration' : 'Mes articles'}
                   </Link>
                   <button
                     onClick={() => {
@@ -169,10 +242,10 @@ export const Header = () => {
             {isAuthenticated ? (
               <>
                 <Link
-                  to="/admin"
+                  to={user?.is_admin ? '/admin' : '/user'}
                   className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                 >
-                  {user?.name}
+                  {user?.is_admin ? 'Administration' : 'Mes articles'}
                 </Link>
                 <button
                   onClick={logout}

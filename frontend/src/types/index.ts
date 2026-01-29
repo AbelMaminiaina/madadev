@@ -1,4 +1,7 @@
+export type ArticleStatus = 'pending' | 'published' | 'rejected';
+
 export interface Article {
+  id?: number;
   title: string;
   slug: string;
   author: string;
@@ -7,6 +10,8 @@ export interface Article {
   image: string;
   excerpt: string;
   content: string;
+  status?: ArticleStatus;
+  author_id?: number;
 }
 
 export type Category =

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useArticlesStore } from '../hooks/useArticlesStore';
 import { ArticleGrid } from '../components/articles/ArticleGrid';
@@ -7,8 +8,12 @@ import type { Category } from '../types';
 export const CategoryPage = () => {
   const { category } = useParams<{ category: string }>();
   const categoryUpper = category?.toUpperCase() as Category;
-  const { articles } = useArticlesStore(categoryUpper);
+  const { articles, refresh } = useArticlesStore(categoryUpper);
   const categoryInfo = getCategoryInfo(categoryUpper);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">

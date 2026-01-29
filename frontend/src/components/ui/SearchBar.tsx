@@ -37,6 +37,11 @@ export const SearchBar = () => {
     clearSearch();
   };
 
+  const closeSearch = () => {
+    setIsOpen(false);
+    clearSearch();
+  };
+
   return (
     <div ref={containerRef} className="relative">
       {!isOpen ? (
@@ -68,7 +73,7 @@ export const SearchBar = () => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Rechercher un article..."
-              className="w-48 sm:w-64 md:w-80 px-4 py-2 pl-10 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent"
+              className="w-80 px-4 py-2 pl-10 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent"
             />
             <svg
               className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
@@ -85,10 +90,7 @@ export const SearchBar = () => {
             </svg>
           </div>
           <button
-            onClick={() => {
-              setIsOpen(false);
-              clearSearch();
-            }}
+            onClick={closeSearch}
             className="ml-2 p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
           >
             <svg

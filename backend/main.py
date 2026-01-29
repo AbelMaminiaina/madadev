@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from database import get_db, engine
 from models import Base, Article as ArticleModel, User as UserModel
 from schemas import (
-    Article, ArticleCreate, ArticleUpdate,
+    Article, ArticleCreate, ArticleUpdate, ArticleStatusUpdate,
     UserCreate, UserLogin, User, Token
 )
 from auth import (
@@ -95,10 +95,46 @@ def get_articles(
     category: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    query = db.query(ArticleModel)
+    """Get all published articles (public endpoint)"""
+    query = db.query(ArticleModel).filter(ArticleModel.status == "published")
     if category and category.upper() != "HOME":
         query = query.filter(ArticleModel.category == category.upper())
     return query.order_by(ArticleModel.date.desc()).all()
+
+
+@app.get("/api/articles/pending", response_model=List[Article])
+def get_pending_articles(
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_active_user)
+):
+    """Get all pending articles (admin only)"""
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return db.query(ArticleModel).filter(
+        ArticleModel.status == "pending"
+    ).order_by(ArticleModel.date.desc()).all()
+
+
+@app.get("/api/articles/my", response_model=List[Article])
+def get_my_articles(
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_active_user)
+):
+    """Get articles created by the current user"""
+    return db.query(ArticleModel).filter(
+        ArticleModel.author_id == current_user.id
+    ).order_by(ArticleModel.date.desc()).all()
+
+
+@app.get("/api/articles/all", response_model=List[Article])
+def get_all_articles(
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_active_user)
+):
+    """Get all articles regardless of status (admin only)"""
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return db.query(ArticleModel).order_by(ArticleModel.date.desc()).all()
 
 
 @app.get("/api/articles/search", response_model=List[Article])
@@ -106,8 +142,10 @@ def search_articles(
     q: str,
     db: Session = Depends(get_db)
 ):
+    """Search published articles"""
     search = f"%{q}%"
     return db.query(ArticleModel).filter(
+        ArticleModel.status == "published",
         (ArticleModel.title.ilike(search)) |
         (ArticleModel.excerpt.ilike(search)) |
         (ArticleModel.content.ilike(search))
@@ -128,6 +166,7 @@ def create_article(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_active_user)
 ):
+    """Create a new article with status=pending"""
     # Check if slug exists
     existing = db.query(ArticleModel).filter(ArticleModel.slug == article.slug).first()
     if existing:
@@ -136,14 +175,40 @@ def create_article(
     db_article = ArticleModel(
         title=article.title,
         slug=article.slug,
-        author=article.author,
+        author=current_user.name,
         date=article.date or date.today(),
         category=article.category,
         image=article.image,
         excerpt=article.excerpt,
-        content=article.content
+        content=article.content,
+        status="pending",
+        author_id=current_user.id
     )
     db.add(db_article)
+    db.commit()
+    db.refresh(db_article)
+    return db_article
+
+
+@app.put("/api/articles/{slug}/status", response_model=Article)
+def update_article_status(
+    slug: str,
+    status_update: ArticleStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_active_user)
+):
+    """Update article status (admin only)"""
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    if status_update.status not in ["pending", "published", "rejected"]:
+        raise HTTPException(status_code=400, detail="Invalid status")
+
+    db_article = db.query(ArticleModel).filter(ArticleModel.slug == slug).first()
+    if not db_article:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    db_article.status = status_update.status
     db.commit()
     db.refresh(db_article)
     return db_article
@@ -156,11 +221,22 @@ def update_article(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_active_user)
 ):
+    """Update an article (owner or admin only)"""
     db_article = db.query(ArticleModel).filter(ArticleModel.slug == slug).first()
     if not db_article:
         raise HTTPException(status_code=404, detail="Article not found")
 
+    # Check if user is owner or admin
+    if db_article.author_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="You can only edit your own articles")
+
     update_data = article.model_dump(exclude_unset=True)
+
+    # Non-admin users cannot change status to published directly
+    if not current_user.is_admin and 'status' in update_data:
+        if update_data['status'] == 'published':
+            raise HTTPException(status_code=403, detail="Only admins can publish articles")
+
     for key, value in update_data.items():
         setattr(db_article, key, value)
 
@@ -175,9 +251,14 @@ def delete_article(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_active_user)
 ):
+    """Delete an article (owner or admin only)"""
     db_article = db.query(ArticleModel).filter(ArticleModel.slug == slug).first()
     if not db_article:
         raise HTTPException(status_code=404, detail="Article not found")
+
+    # Check if user is owner or admin
+    if db_article.author_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="You can only delete your own articles")
 
     db.delete(db_article)
     db.commit()
@@ -203,7 +284,8 @@ def seed_database(db: Session = Depends(get_db)):
             "category": "IA",
             "image": "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800&h=500&fit=crop",
             "excerpt": "Une analyse approfondie de l'impact réel de l'IA sur les entreprises et la société.",
-            "content": "# Au-delà du hype\n\nL'intelligence artificielle est partout. Mais au-delà des promesses marketing, quel est son impact réel ?\n\n## Le coût caché de l'IA\n\n- Infrastructure cloud\n- Données d'entraînement\n- Expertise technique"
+            "content": "# Au-delà du hype\n\nL'intelligence artificielle est partout. Mais au-delà des promesses marketing, quel est son impact réel ?\n\n## Le coût caché de l'IA\n\n- Infrastructure cloud\n- Données d'entraînement\n- Expertise technique",
+            "status": "published"
         },
         {
             "title": "Grokipedia : une simple encyclopédie ?",
@@ -213,7 +295,8 @@ def seed_database(db: Session = Depends(get_db)):
             "category": "IA",
             "image": "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=500&fit=crop",
             "excerpt": "Découverte de Grokipedia, le nouveau projet qui veut révolutionner l'accès au savoir.",
-            "content": "# Grokipedia\n\nGrokipedia promet de transformer notre façon d'accéder à l'information."
+            "content": "# Grokipedia\n\nGrokipedia promet de transformer notre façon d'accéder à l'information.",
+            "status": "published"
         },
         {
             "title": "Recruteur Tech : les 7 clés pour survivre",
@@ -223,7 +306,8 @@ def seed_database(db: Session = Depends(get_db)):
             "category": "RH",
             "image": "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=800&h=500&fit=crop",
             "excerpt": "Le métier de recruteur tech évolue. Voici les compétences essentielles.",
-            "content": "# Recruteur Tech\n\nLe recrutement tech est un métier à part."
+            "content": "# Recruteur Tech\n\nLe recrutement tech est un métier à part.",
+            "status": "published"
         },
         {
             "title": "Le principe de Peter",
@@ -233,7 +317,8 @@ def seed_database(db: Session = Depends(get_db)):
             "category": "STORY",
             "image": "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=500&fit=crop",
             "excerpt": "Comprendre pourquoi certains managers semblent incompétents.",
-            "content": "# Le principe de Peter\n\nDans une hiérarchie, tout employé tend à s'élever à son niveau d'incompétence."
+            "content": "# Le principe de Peter\n\nDans une hiérarchie, tout employé tend à s'élever à son niveau d'incompétence.",
+            "status": "published"
         },
         {
             "title": "AbortController en JavaScript",
@@ -243,7 +328,8 @@ def seed_database(db: Session = Depends(get_db)):
             "category": "FRONT",
             "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&h=500&fit=crop",
             "excerpt": "Maîtrisez l'AbortController pour gérer vos requêtes asynchrones.",
-            "content": "# AbortController\n\nL'AbortController est un outil puissant pour gérer les requêtes HTTP."
+            "content": "# AbortController\n\nL'AbortController est un outil puissant pour gérer les requêtes HTTP.",
+            "status": "published"
         },
         {
             "title": "Kubernetes en 2026",
@@ -253,7 +339,8 @@ def seed_database(db: Session = Depends(get_db)):
             "category": "CLOUD",
             "image": "https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=800&h=500&fit=crop",
             "excerpt": "Les nouvelles pratiques Kubernetes à adopter.",
-            "content": "# Kubernetes en 2026\n\nKubernetes continue d'évoluer. GitOps partout avec ArgoCD et Flux."
+            "content": "# Kubernetes en 2026\n\nKubernetes continue d'évoluer. GitOps partout avec ArgoCD et Flux.",
+            "status": "published"
         }
     ]
 

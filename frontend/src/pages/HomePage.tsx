@@ -1,10 +1,15 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useArticlesStore } from '../hooks/useArticlesStore';
 import { getCategoryInfo } from '../data/categories';
 import { formatDateShort } from '../utils/date';
 
 export const HomePage = () => {
-  const { articles } = useArticlesStore();
+  const { articles, refresh } = useArticlesStore();
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   const featuredArticle = articles[0];
   const popularArticles = articles.slice(1, 5);

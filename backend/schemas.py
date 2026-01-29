@@ -46,7 +46,13 @@ class ArticleBase(BaseModel):
     content: str
 
 
-class ArticleCreate(ArticleBase):
+class ArticleCreate(BaseModel):
+    title: str
+    slug: str
+    category: str
+    image: Optional[str] = None
+    excerpt: Optional[str] = None
+    content: str
     date: Optional[date] = None
 
 
@@ -57,11 +63,18 @@ class ArticleUpdate(BaseModel):
     image: Optional[str] = None
     excerpt: Optional[str] = None
     content: Optional[str] = None
+    status: Optional[str] = None  # pending, published, rejected
+
+
+class ArticleStatusUpdate(BaseModel):
+    status: str  # pending, published, rejected
 
 
 class Article(ArticleBase):
     id: int
     date: date
+    status: str = "pending"
+    author_id: Optional[int] = None
 
     class Config:
         from_attributes = True

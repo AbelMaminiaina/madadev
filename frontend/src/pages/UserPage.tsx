@@ -5,17 +5,32 @@ import { api } from '../services/api';
 import { categories } from '../data/categories';
 import type { Article, Category, ArticleStatus } from '../types';
 
-type TabType = 'my-articles' | 'pending' | 'all';
+const StatusBadge = ({ status }: { status?: ArticleStatus }) => {
+  const styles = {
+    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+    published: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+    rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  };
 
-export const AdminPage = () => {
+  const labels = {
+    pending: 'En attente',
+    published: 'Publie',
+    rejected: 'Rejete',
+  };
+
+  const s = status || 'pending';
+  return (
+    <span className={`px-2 py-1 text-xs font-medium rounded-full ${styles[s]}`}>
+      {labels[s]}
+    </span>
+  );
+};
+
+export const UserPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isAdmin = user?.is_admin || false;
 
-  const [activeTab, setActiveTab] = useState<TabType>('pending');
   const [myArticles, setMyArticles] = useState<Article[]>([]);
-  const [pendingArticles, setPendingArticles] = useState<Article[]>([]);
-  const [allArticles, setAllArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
@@ -33,13 +48,6 @@ export const AdminPage = () => {
     try {
       const my = await api.getMyArticles();
       setMyArticles(my);
-
-      if (isAdmin) {
-        const pending = await api.getPendingArticles();
-        setPendingArticles(pending);
-        const all = await api.getAllArticles();
-        setAllArticles(all);
-      }
     } catch (error) {
       console.error('Error fetching articles:', error);
     } finally {
@@ -49,7 +57,7 @@ export const AdminPage = () => {
 
   useEffect(() => {
     fetchArticles();
-  }, [isAdmin]);
+  }, []);
 
   const generateSlug = (title: string) => {
     return title
@@ -105,6 +113,7 @@ export const AdminPage = () => {
 
     try {
       if (editingSlug) {
+        // Update existing article
         await api.updateArticle(editingSlug, {
           title: formData.title,
           category: formData.category,
@@ -113,6 +122,7 @@ export const AdminPage = () => {
           content: formData.content,
         });
       } else {
+        // Create new article
         await api.createArticle({
           title: formData.title,
           slug: formData.slug || generateSlug(formData.title),
@@ -152,20 +162,16 @@ export const AdminPage = () => {
     }
   };
 
-  const handleStatusChange = async (slug: string, status: ArticleStatus) => {
-    try {
-      await api.updateArticleStatus(slug, status);
-      fetchArticles();
-    } catch (error) {
-      console.error('Error updating status:', error);
-      alert('Erreur lors de la mise a jour du statut');
-    }
-  };
-
   const handleToggleStatus = async (slug: string, activate: boolean) => {
     try {
-      const newStatus = activate ? 'published' : 'pending';
-      await api.updateArticleStatus(slug, newStatus);
+      if (activate) {
+        // Users cannot publish directly, show message
+        alert('Seul un administrateur peut publier un article.');
+        return;
+      } else {
+        // Deactivate - set to pending
+        await api.updateArticle(slug, { status: 'pending' });
+      }
       fetchArticles();
     } catch (error) {
       console.error('Error toggling status:', error);
@@ -173,35 +179,16 @@ export const AdminPage = () => {
     }
   };
 
-  const getCurrentArticles = () => {
-    switch (activeTab) {
-      case 'my-articles':
-        return myArticles;
-      case 'pending':
-        return pendingArticles;
-      case 'all':
-        return allArticles;
-      default:
-        return [];
-    }
-  };
-
-  const tabs = [
-    { id: 'pending' as TabType, label: 'En attente', count: pendingArticles.length },
-    { id: 'all' as TabType, label: 'Tous les articles', count: allArticles.length },
-    { id: 'my-articles' as TabType, label: 'Mes articles', count: myArticles.length },
-  ];
-
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Administration
+            Mes articles
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Gerez tous les articles du blog
+            Bienvenue {user?.name}
           </p>
         </div>
         <div className="flex gap-3">
@@ -220,32 +207,6 @@ export const AdminPage = () => {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
-        <nav className="flex gap-4">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === tab.id
-                  ? 'border-accent text-accent'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              {tab.label}
-              <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
-                activeTab === tab.id
-                  ? 'bg-accent/10 text-accent'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-              }`}>
-                {tab.count}
-              </span>
-            </button>
-          ))}
-        </nav>
-      </div>
-
       {/* Form Modal */}
       {isFormOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -254,6 +215,11 @@ export const AdminPage = () => {
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 {editingSlug ? 'Modifier l\'article' : 'Nouvel article'}
               </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                {editingSlug
+                  ? 'Les modifications seront soumises a validation.'
+                  : 'Votre article sera soumis a validation avant publication.'}
+              </p>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -401,7 +367,7 @@ export const AdminPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {getCurrentArticles().map((article) => (
+              {myArticles.map((article) => (
                 <tr key={article.slug} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -427,51 +393,38 @@ export const AdminPage = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={article.status === 'published'}
-                          onChange={(e) => handleToggleStatus(article.slug, e.target.checked)}
-                          className="sr-only peer"
-                        />
-                        <div className={`w-9 h-5 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all ${
-                          article.status === 'published'
-                            ? 'bg-green-500'
-                            : article.status === 'rejected'
-                              ? 'bg-red-400'
-                              : 'bg-gray-300 dark:bg-gray-600'
-                        }`}></div>
-                      </label>
-                      <span className={`text-xs ${
-                        article.status === 'published'
-                          ? 'text-green-600 dark:text-green-400'
-                          : article.status === 'rejected'
-                            ? 'text-red-600 dark:text-red-400'
-                            : 'text-yellow-600 dark:text-yellow-400'
-                      }`}>
-                        {article.status === 'published' ? 'Actif' : article.status === 'rejected' ? 'Rejete' : 'En attente'}
-                      </span>
+                      {article.status === 'published' ? (
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={true}
+                            onChange={() => handleToggleStatus(article.slug, false)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-green-500 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+                          <span className="ml-2 text-xs text-green-600 dark:text-green-400">Actif</span>
+                        </label>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <StatusBadge status={article.status} />
+                          {article.status === 'rejected' && (
+                            <span className="text-xs text-gray-500">(non modifiable)</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {article.date}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-3">
                       {article.status === 'published' && (
                         <button
                           onClick={() => navigate(`/article/${article.slug}`)}
                           className="text-accent hover:text-accent-dark text-sm"
                         >
                           Voir
-                        </button>
-                      )}
-                      {activeTab === 'pending' && (
-                        <button
-                          onClick={() => handleStatusChange(article.slug, 'rejected')}
-                          className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
-                        >
-                          Rejeter
                         </button>
                       )}
                       <button
@@ -493,11 +446,9 @@ export const AdminPage = () => {
             </tbody>
           </table>
 
-          {getCurrentArticles().length === 0 && (
+          {myArticles.length === 0 && (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-              {activeTab === 'my-articles' && 'Vous n\'avez pas encore d\'articles.'}
-              {activeTab === 'pending' && 'Aucun article en attente de validation.'}
-              {activeTab === 'all' && 'Aucun article dans la base de donnees.'}
+              Vous n'avez pas encore d'articles. Creez votre premier article !
             </div>
           )}
         </div>

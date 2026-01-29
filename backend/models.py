@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Text, Date, Boolean
+from sqlalchemy import Column, Integer, String, Text, Date, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
 from database import Base
 
 
@@ -11,6 +12,8 @@ class User(Base):
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
+
+    articles = relationship("Article", back_populates="user")
 
 
 class Article(Base):
@@ -25,3 +28,7 @@ class Article(Base):
     image = Column(String(1000), nullable=True)
     excerpt = Column(Text, nullable=True)
     content = Column(Text, nullable=False)
+    status = Column(String(20), nullable=False, default="pending", index=True)
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    user = relationship("User", back_populates="articles")
