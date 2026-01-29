@@ -22,7 +22,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Dev Stories API",
     description="API pour le blog Dev Stories",
-    version="1.0.0"
+    version="1.1.0"
 )
 
 # CORS
